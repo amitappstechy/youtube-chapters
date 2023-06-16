@@ -24,7 +24,7 @@
             if(url!='')
             {
                 var video_id =  getYouTubeVideoId(url);
-                location.href ="/yt-chapters/videos.php?part=chapters&id="+video_id;
+                location.href ="/yt-chapter/videos.php?part=chapters&id="+video_id;
             }
            
         })
