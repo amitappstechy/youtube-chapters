@@ -4,8 +4,10 @@ namespace App\Http\Controllers\Frontend;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
+
 use GuzzleHttp\Client;
 use Validator;
+use Carbon\Carbon;
 
 class YouTubeTransScriptController extends Controller
 {
@@ -88,19 +90,20 @@ class YouTubeTransScriptController extends Controller
             if(isset($transcript_data))
             {
                 $transcript =  $request->transcript;
-                $pattern = '/([\d.]+)-([\d.]+)=/';
-                $matches = [];
 
-                preg_match_all($pattern, $transcript, $matches);
+                // Extract first time using regular expression
+                preg_match('/(\d{2}:\d{2})/', $transcript, $matches);
+                $firstSecond = self::getTime($matches[0]);
+                
+                // Extract last time using regular expression
+                preg_match_all('/(\d{2}:\d{2})/', $transcript, $matches);
+                $lastSecond = self::getTime(end($matches[0]));
+
                 if ($hit_index==0)
                 {
                     $firstSecond = '00:00:00';
                 }
-                else{
-                    $firstSecond = self::getTime($matches[1][0]);
-                }
-                $lastSecond = self::getTime(end($matches[2]));
-                
+  
                 $transcript_prompt = preg_replace('/\d+\.\d+-\d+\.\d+=/', '', $transcript);
 
                 $open_ai_response = self::hit_chat_gpt($transcript_prompt);
@@ -134,13 +137,25 @@ class YouTubeTransScriptController extends Controller
      */
     function getTime($seconds)
     {
-        $seconds = intval($seconds); // Convert to integer
+        if(!strtotime($seconds))
+        {
+            $seconds = intval($seconds); // Convert to integer
+            $hours = floor($seconds / 3600);
+            $minutes = floor(($seconds % 3600) / 60);
+            $seconds = round($seconds % 60);
 
-        $hours = floor($seconds / 3600);
-        $minutes = floor(($seconds % 3600) / 60);
-        $seconds = round($seconds % 60);
-
-        $time = sprintf("%02d:%02d:%02d", $hours, $minutes, $seconds);
+            $time = sprintf("%02d:%02d:%02d", $hours, $minutes, $seconds);
+        }
+        elseif(strtotime($seconds)){
+            $y = $seconds;
+            // Check if the input format includes the hour value
+            if (preg_match('/^\d+:\d+$/', $y)) {
+                $format = 'i:s';
+            } else {
+                $format = 'H:i:s';
+            }
+            $time = Carbon::createFromFormat($format, $y)->format('H:i:s');
+        }
         return $time;
     }
 
